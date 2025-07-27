@@ -321,6 +321,38 @@
             font-size: 22px;
         }
 
+        /* Barra de progresso */
+        .progress-container {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(220,90,90,0.2);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #dc5a5a, #a85555);
+            border-radius: 5px;
+            transition: width 0.5s ease-out;
+            width: 0%;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 14px;
+            color: #ccc;
+        }
+
         /* PWA Install Banner */
         .install-banner {
             background: rgba(255,255,255,0.15);
@@ -347,6 +379,57 @@
             .header h1 {
                 font-size: 1.8em;
             }
+        /* Animações para transições suaves */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Aplicar animações */
+        .question-display {
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .option {
+            animation: slideIn 0.3s ease-out;
+            animation-delay: calc(var(--index) * 0.1s);
+        }
+
+        .option.correct {
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        .option.wrong {
+            animation: shake 0.5s ease-in-out;
+        }            
             
             .controls, .help-buttons, .help-status {
                 flex-direction: column;
@@ -395,6 +478,13 @@
                 <div class="stat-number" id="hardCount">6</div>
                 <div class="stat-label">Difíceis Restantes</div>
             </div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0 de 0 perguntas respondidas</div>
         </div>
 
         <div class="help-status">
@@ -492,6 +582,8 @@
         let skipsRemaining = 3;
         let eliminatedOptions = [];
         let questionAnswered = false;
+        let totalQuestions = 0;
+        let answeredQuestions = 0;        
 
         function updateStats() {
             document.getElementById('easyCount').textContent = availableQuestions.easy.length + availableQuestions.medium.length;
@@ -552,7 +644,8 @@
                 const isEliminated = eliminatedOptions.includes(index);
                 optionsHtml += `
                     <div class="option ${isEliminated ? 'eliminated' : ''}" 
-                         onclick="${isEliminated || questionAnswered ? '' : `selectOption(${index})`}">
+                        style="--index: ${index}"
+                        onclick="${isEliminated || questionAnswered ? '' : `selectOption(${index})`}">
                         ${String.fromCharCode(65 + index)}) ${option}
                     </div>
                 `;
