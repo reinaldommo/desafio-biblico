@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --night: #0e0420;
+  --gold: #f5b642;
+  --gold-light: #ffd56a;
+  --royal: #6d28d9;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-night text-ink font-body antialiased;
+    background-image: var(--tw-gradient-stage, none);
+    min-height: 100dvh;
+  }
+
+  /* Fundo de palco fixo com brilho radial roxo e vinheta */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(circle at 50% -10%, #3b0f7a 0%, #1b0b3a 45%, #0e0420 80%);
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 120%, rgba(168, 85, 247, 0.18), transparent 60%);
+  }
+
+  ::selection {
+    background: rgba(245, 182, 66, 0.35);
+    color: #fff;
+  }
+
+  /* Foco visível e elegante para acessibilidade / projetor */
+  :focus-visible {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/[0.06] backdrop-blur-xl border border-gold/25 shadow-glass;
+  }
+
+  .glass-strong {
+    @apply bg-white/[0.09] backdrop-blur-2xl border border-gold/30 shadow-glass;
+  }
+
+  /* Texto com gradiente dourado + brilho — usado em títulos */
+  .text-gold-gradient {
+    @apply bg-gold-gradient bg-clip-text text-transparent;
+    text-shadow: 0 0 30px rgba(245, 182, 66, 0.25);
+  }
+
+  /* Título com varredura de brilho (shimmer) */
+  .text-shimmer {
+    background: linear-gradient(
+      100deg,
+      #c8932b 20%,
+      #ffe9a8 40%,
+      #fff 50%,
+      #ffe9a8 60%,
+      #c8932b 80%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    @apply animate-shimmer;
+  }
+
+  .divider-gold {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(245, 182, 66, 0.6),
+      transparent
+    );
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Esconde scrollbar mantendo o scroll */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

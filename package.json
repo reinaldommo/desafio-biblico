@@ -1,0 +1,37 @@
+{
+  "name": "desafio-biblico",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Desafio Bíblico — Gincana interativa da Igreja Evangélica Pentecostal de Pinheiros (IEPP)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "validate:questions": "tsx scripts/validate-questions.ts"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.3",
+    "framer-motion": "^11.5.4",
+    "next": "14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@serwist/next": "^9.0.9",
+    "@types/canvas-confetti": "^1.6.4",
+    "@types/node": "^20.16.10",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.15",
+    "postcss": "^8.4.47",
+    "serwist": "^9.0.9",
+    "sharp": "^0.35.1",
+    "tailwindcss": "^3.4.13",
+    "tsx": "^4.22.4",
+    "typescript": "^5.6.2"
+  }
+}

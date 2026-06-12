@@ -1,0 +1,41 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="#3B0F7A"/>
+      <stop offset="55%" stop-color="#1B0B3A"/>
+      <stop offset="100%" stop-color="#0E0420"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE9A8"/>
+      <stop offset="45%" stop-color="#F5B642"/>
+      <stop offset="100%" stop-color="#C8932B"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- aura -->
+  <circle cx="256" cy="232" r="150" fill="#A855F7" opacity="0.18"/>
+  <!-- open book -->
+  <g filter="url(#glow)">
+    <path d="M256 168 C212 142 156 142 120 156 L120 348 C156 334 212 334 256 360 C300 334 356 334 392 348 L392 156 C356 142 300 142 256 168 Z"
+          fill="url(#gold)" opacity="0.95"/>
+    <path d="M256 168 L256 360" stroke="#0E0420" stroke-width="10" stroke-linecap="round"/>
+    <path d="M150 192 C180 184 214 186 236 198" stroke="#0E0420" stroke-width="7" fill="none" opacity="0.55" stroke-linecap="round"/>
+    <path d="M150 232 C180 224 214 226 236 238" stroke="#0E0420" stroke-width="7" fill="none" opacity="0.55" stroke-linecap="round"/>
+    <path d="M276 198 C298 186 332 184 362 192" stroke="#0E0420" stroke-width="7" fill="none" opacity="0.55" stroke-linecap="round"/>
+    <path d="M276 238 C298 226 332 224 362 232" stroke="#0E0420" stroke-width="7" fill="none" opacity="0.55" stroke-linecap="round"/>
+  </g>
+  <!-- cross rising from the book -->
+  <g filter="url(#glow)">
+    <rect x="244" y="96" width="24" height="120" rx="8" fill="url(#gold)"/>
+    <rect x="212" y="128" width="88" height="22" rx="8" fill="url(#gold)"/>
+  </g>
+  <!-- sparkles -->
+  <circle cx="150" cy="120" r="6" fill="#FFE9A8"/>
+  <circle cx="372" cy="110" r="5" fill="#FFE9A8"/>
+  <circle cx="404" cy="300" r="5" fill="#FFD56A"/>
+  <circle cx="108" cy="300" r="5" fill="#FFD56A"/>
+</svg>

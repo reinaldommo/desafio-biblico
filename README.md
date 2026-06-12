@@ -1,1 +1,65 @@
-# desafio-biblico
+# ✝️ Desafio Bíblico — IEPP
+
+Gincana Bíblica interativa da **Igreja Evangélica Pentecostal de Pinheiros**. Reconstruída com tecnologia moderna, visual "Dourado/Roxo celestial", gamificação completa e instalável como app (PWA).
+
+> Momento de comunhão e conhecimento da Palavra de Deus. ✨
+
+## ✨ Recursos
+
+- **220 perguntas** bíblicas em 3 níveis (Fácil · Média · Difícil), com referências.
+- **Pontuação e gamificação**: pontos por dificuldade (100/200/300), bônus de
+  sequência (streak 🔥) e bônus de tempo.
+- **Cronômetro opcional** por pergunta (20/30/45/60s) com anel regressivo.
+- **3 ajudas**: ✂️ Eliminar 2 · 🙏 Pastor · ⏭️ Pular (3x).
+- **Ranking local** (localStorage) com tela de resultado e confete.
+- **Modo projetor/TV**: textos grandes, alto contraste, visual de palco.
+- **PWA**: instalável e funciona offline.
+- Animações premium com **Framer Motion** e efeitos de luz divina.
+
+## 🛠️ Stack
+
+Next.js 14 (App Router) · TypeScript · Tailwind CSS · Zustand · Framer Motion · Serwist (PWA).
+
+## 🚀 Desenvolvimento
+
+```bash
+npm install
+npm run dev          # http://localhost:3000
+```
+
+Outros comandos:
+
+```bash
+npm run build               # build de produção (typecheck + lint + PWA)
+npm start                   # serve o build
+npm run validate:questions  # valida integridade do banco de perguntas
+node scripts/generate-icons.mjs  # regenera os ícones do PWA a partir de app/icon.svg
+```
+
+## ☁️ Deploy na Vercel
+
+1. Faça push do repositório para o GitHub.
+2. Em [vercel.com](https://vercel.com) → **Add New Project** → importe o repositório.
+3. A Vercel detecta o Next.js automaticamente — sem variáveis de ambiente.
+   Clique em **Deploy**.
+
+Ou via CLI: `npx vercel`.
+
+## 📁 Estrutura
+
+```
+app/            layout, page (orquestra telas), globals.css, manifest.ts, sw.ts, icon.svg
+components/     screens · game · hud · ranking · effects · pwa · ui
+store/          gameStore.ts (Zustand + persist)
+lib/            scoring · draw · ranking · pastorHints · constants
+data/           questions.ts (banco tipado de perguntas)
+types/          index.ts
+scripts/        validate-questions · generate-icons
+legacy/         versão original em HTML/CSS/JS (preservada)
+```
+
+## ➕ Como adicionar perguntas
+
+Edite `data/questions.ts`, adicione um objeto no array do nível desejado com um
+`num` único, 4 `options`, o índice `correct` (0–3) e a `ref` bíblica. Rode
+`npm run validate:questions` para checar a integridade.
