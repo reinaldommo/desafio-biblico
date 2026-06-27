@@ -16,6 +16,7 @@ export function WelcomeScreen() {
   const totalRounds = useGameStore((s) => s.totalRounds);
   const timerEnabled = useGameStore((s) => s.timerEnabled);
   const timerSeconds = useGameStore((s) => s.timerSeconds);
+  const manualReveal = useGameStore((s) => s.manualReveal);
   const setConfig = useGameStore((s) => s.setConfig);
   const setTeamName = useGameStore((s) => s.setTeamName);
   const startGame = useGameStore((s) => s.startGame);
@@ -141,6 +142,32 @@ export function WelcomeScreen() {
             </div>
           </div>
         )}
+
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <label className="flex cursor-pointer items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={manualReveal}
+              onClick={() => setConfig({ manualReveal: !manualReveal })}
+              className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${
+                manualReveal ? "bg-gold" : "bg-white/15"
+              }`}
+            >
+              <span
+                className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                  manualReveal ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className="text-left text-ink">
+              🔎 Revelar resultado manualmente
+              <span className="block text-xs text-ink-soft">
+                Marque a resposta e revele com um botão.
+              </span>
+            </span>
+          </label>
+        </div>
 
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <label className="flex cursor-pointer items-center gap-3">

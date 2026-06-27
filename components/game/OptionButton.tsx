@@ -10,6 +10,8 @@ interface OptionButtonProps {
   answered: boolean;
   isCorrect: boolean;
   isSelected: boolean;
+  /** Marcada pela equipe, aguardando revelação (modo manual). */
+  marked?: boolean;
   onSelect: (index: number) => void;
 }
 
@@ -21,6 +23,7 @@ export function OptionButton({
   answered,
   isCorrect,
   isSelected,
+  marked = false,
   onSelect,
 }: OptionButtonProps) {
   const disabled = answered || eliminated;
@@ -32,10 +35,13 @@ export function OptionButton({
     else state = "dim";
   } else if (eliminated) {
     state = "eliminated";
+  } else if (marked) {
+    state = "marked";
   }
 
   const stateClasses: Record<string, string> = {
     idle: "border-gold/20 bg-white/[0.05] hover:border-gold/60 hover:bg-white/[0.1]",
+    marked: "border-gold bg-gold/20 shadow-gold-glow",
     correct: "border-success bg-success/25 shadow-success-glow",
     wrong: "border-danger bg-danger/25 shadow-danger-glow",
     dim: "border-white/10 bg-white/[0.03] opacity-50",
@@ -51,12 +57,13 @@ export function OptionButton({
       animate={{
         opacity: eliminated && !answered ? 0.3 : 1,
         y: 0,
+        scale: state === "marked" ? 1.02 : 1,
         filter: eliminated && !answered ? "blur(2px)" : "blur(0px)",
       }}
       transition={{ delay: index * 0.08, type: "spring", stiffness: 260, damping: 24 }}
       whileHover={disabled ? undefined : { scale: 1.025 }}
       whileTap={disabled ? undefined : { scale: 0.98 }}
-      className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-left backdrop-blur-md transition-colors duration-200 md:p-5 ${stateClasses[state]} ${disabled ? "cursor-default" : "cursor-pointer"}`}
+      className={`relative flex items-center gap-4 rounded-2xl border-2 p-4 text-left backdrop-blur-md transition-colors duration-200 md:p-5 ${stateClasses[state]} ${disabled ? "cursor-default" : "cursor-pointer"}`}
     >
       <span
         className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-base font-bold md:h-11 md:w-11 md:text-lg ${
@@ -72,6 +79,11 @@ export function OptionButton({
       <span className="text-base font-medium text-ink md:text-xl lg:text-2xl">
         {text}
       </span>
+      {state === "marked" && (
+        <span className="ml-auto whitespace-nowrap text-sm font-semibold text-gold-light">
+          ✓ marcada
+        </span>
+      )}
     </motion.button>
   );
 }

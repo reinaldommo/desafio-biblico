@@ -44,6 +44,7 @@ interface GameState {
   mode: GameMode;
   teamNames: [string, string];
   totalRounds: number;
+  manualReveal: boolean;
 
   // Fase / progresso
   phase: GamePhase;
@@ -51,6 +52,7 @@ interface GameState {
   current: Question | null;
   currentCategory: DrawCategory | null;
   selectedOption: number | null;
+  markedRemaining: number | null;
   answered: boolean;
   eliminatedOptions: number[];
   pastorHint: string | null;
@@ -88,6 +90,7 @@ interface GameState {
       teamName: string;
       mode: GameMode;
       totalRounds: number;
+      manualReveal: boolean;
     }>,
   ) => void;
   setTeamName: (i: TeamIndex, name: string) => void;
@@ -95,6 +98,7 @@ interface GameState {
   startVersus: () => void;
   drawQuestion: (category: DrawCategory) => void;
   selectOption: (index: number, remainingSeconds?: number) => void;
+  revealResult: () => void;
   useEliminate: () => void;
   usePastor: () => void;
   useSkip: () => void;
@@ -146,6 +150,7 @@ const initialRoundState = {
   current: null as Question | null,
   currentCategory: null as DrawCategory | null,
   selectedOption: null as number | null,
+  markedRemaining: null as number | null,
   answered: false,
   eliminatedOptions: [] as number[],
   pastorHint: null as string | null,
@@ -154,6 +159,124 @@ const initialRoundState = {
   firstSelected: null as number | null,
   versusResult: null as VersusResult | null,
 };
+
+/**
+ * Calcula a alteração de estado ao confirmar/revelar uma resposta.
+ * Usado tanto na revelação instantânea quanto no botão "Revelar resultado".
+ */
+function buildAnswerPatch(
+  state: GameState,
+  index: number,
+  remaining: number,
+): Partial<GameState> {
+  const q = state.current as Question;
+  const correct = index === q.correct;
+
+  // ───────────── Modo VERSUS ─────────────
+  if (state.mode === "versus") {
+    const ct = state.currentTeam;
+    const team = state.teams[ct];
+    const relampago = isRelampago(state.turnIndex);
+    const relMult = relampago ? VERSUS_CONFIG.relampagoMultiplier : 1;
+    const teams = [...state.teams] as [TeamState, TeamState];
+
+    if (correct) {
+      const newStreak = team.streak + 1;
+      const baseScore = computeScore({
+        difficulty: q.difficulty,
+        streak: newStreak,
+        timerEnabled: state.timerEnabled,
+        remaining,
+        total: state.timerSeconds,
+      });
+      const mult = relMult * (state.wagerActive ? VERSUS_CONFIG.wagerMultiplier : 1);
+      const points = Math.round(baseScore * mult);
+      teams[ct] = {
+        ...team,
+        score: team.score + points,
+        correct: team.correct + 1,
+        streak: newStreak,
+        maxStreak: Math.max(team.maxStreak, newStreak),
+      };
+      return {
+        teams,
+        answered: true,
+        selectedOption: index,
+        stealPhase: false,
+        versusResult: {
+          outcome: "correct",
+          scoringTeam: ct,
+          points,
+          penalty: 0,
+          correctIndex: q.correct,
+          selectedIndex: index,
+          stealIndex: null,
+          wager: state.wagerActive,
+          relampago,
+        },
+      };
+    }
+
+    // Errou → aplica penalidade da aposta e abre o roubo para a adversária
+    const penalty = state.wagerActive
+      ? Math.round(basePoints(q.difficulty) * relMult)
+      : 0;
+    teams[ct] = {
+      ...team,
+      score: Math.max(0, team.score - penalty),
+      wrong: team.wrong + 1,
+      streak: 0,
+    };
+    return {
+      teams,
+      answered: true,
+      selectedOption: index,
+      stealPhase: true,
+      firstSelected: index,
+      versusResult: {
+        outcome: "missed",
+        scoringTeam: null,
+        points: 0,
+        penalty,
+        correctIndex: q.correct,
+        selectedIndex: index,
+        stealIndex: null,
+        wager: state.wagerActive,
+        relampago,
+      },
+    };
+  }
+
+  // ───────────── Modo SOLO ─────────────
+  const newStreak = correct ? state.streak + 1 : 0;
+  const pointsEarned = correct
+    ? computeScore({
+        difficulty: q.difficulty,
+        streak: newStreak,
+        timerEnabled: state.timerEnabled,
+        remaining,
+        total: state.timerSeconds,
+      })
+    : 0;
+
+  return {
+    answered: true,
+    selectedOption: index,
+    score: state.score + pointsEarned,
+    streak: newStreak,
+    maxStreak: Math.max(state.maxStreak, newStreak),
+    correctCount: state.correctCount + (correct ? 1 : 0),
+    wrongCount: state.wrongCount + (correct ? 0 : 1),
+    questionsPlayed: state.questionsPlayed + 1,
+    lastResult: {
+      correct,
+      pointsEarned,
+      correctIndex: q.correct,
+      selectedIndex: index,
+      expired: false,
+    },
+  };
+}
 
 export const useGameStore = create<GameState>()(
   persist(
@@ -166,6 +289,7 @@ export const useGameStore = create<GameState>()(
       mode: "versus",
       teamNames: [...VERSUS_DEFAULT_NAMES] as [string, string],
       totalRounds: VERSUS_CONFIG.defaultRounds,
+      manualReveal: true,
 
       phase: "welcome",
       available: freshPool(),
@@ -266,116 +390,26 @@ export const useGameStore = create<GameState>()(
         const q = state.current;
         if (!q || state.answered) return;
 
-        const correct = index === q.correct;
         const remaining =
           remainingSeconds ?? (state.timerEnabled ? state.timerSeconds : 0);
 
-        // ───────────── Modo VERSUS ─────────────
-        if (state.mode === "versus") {
-          const ct = state.currentTeam;
-          const team = state.teams[ct];
-          const relampago = isRelampago(state.turnIndex);
-          const relMult = relampago ? VERSUS_CONFIG.relampagoMultiplier : 1;
-          const teams = [...state.teams] as [TeamState, TeamState];
-
-          if (correct) {
-            const newStreak = team.streak + 1;
-            const baseScore = computeScore({
-              difficulty: q.difficulty,
-              streak: newStreak,
-              timerEnabled: state.timerEnabled,
-              remaining,
-              total: state.timerSeconds,
-            });
-            const mult = relMult * (state.wagerActive ? VERSUS_CONFIG.wagerMultiplier : 1);
-            const points = Math.round(baseScore * mult);
-            teams[ct] = {
-              ...team,
-              score: team.score + points,
-              correct: team.correct + 1,
-              streak: newStreak,
-              maxStreak: Math.max(team.maxStreak, newStreak),
-            };
-            set({
-              teams,
-              answered: true,
-              selectedOption: index,
-              stealPhase: false,
-              versusResult: {
-                outcome: "correct",
-                scoringTeam: ct,
-                points,
-                penalty: 0,
-                correctIndex: q.correct,
-                selectedIndex: index,
-                stealIndex: null,
-                wager: state.wagerActive,
-                relampago,
-              },
-            });
-            return;
-          }
-
-          // Errou → aplica penalidade da aposta e abre o roubo para a adversária
-          const penalty = state.wagerActive
-            ? Math.round(basePoints(q.difficulty) * relMult)
-            : 0;
-          teams[ct] = {
-            ...team,
-            score: Math.max(0, team.score - penalty),
-            wrong: team.wrong + 1,
-            streak: 0,
-          };
-          set({
-            teams,
-            answered: true,
-            selectedOption: index,
-            stealPhase: true,
-            firstSelected: index,
-            versusResult: {
-              outcome: "missed",
-              scoringTeam: null,
-              points: 0,
-              penalty,
-              correctIndex: q.correct,
-              selectedIndex: index,
-              stealIndex: null,
-              wager: state.wagerActive,
-              relampago,
-            },
-          });
+        // Revelação manual: apenas marca a resposta (pode ser trocada até revelar).
+        if (state.manualReveal) {
+          set({ selectedOption: index, markedRemaining: remaining });
           return;
         }
 
-        // ───────────── Modo SOLO ─────────────
-        const newStreak = correct ? state.streak + 1 : 0;
-        const pointsEarned = correct
-          ? computeScore({
-              difficulty: q.difficulty,
-              streak: newStreak,
-              timerEnabled: state.timerEnabled,
-              remaining,
-              total: state.timerSeconds,
-            })
-          : 0;
+        // Revelação instantânea: marca e revela de uma vez.
+        set(buildAnswerPatch(state, index, remaining));
+      },
 
-        set({
-          answered: true,
-          selectedOption: index,
-          score: state.score + pointsEarned,
-          streak: newStreak,
-          maxStreak: Math.max(state.maxStreak, newStreak),
-          correctCount: state.correctCount + (correct ? 1 : 0),
-          wrongCount: state.wrongCount + (correct ? 0 : 1),
-          questionsPlayed: state.questionsPlayed + 1,
-          lastResult: {
-            correct,
-            pointsEarned,
-            correctIndex: q.correct,
-            selectedIndex: index,
-            expired: false,
-          },
-        });
+      revealResult: () => {
+        const state = get();
+        const q = state.current;
+        if (!q || state.answered || state.selectedOption === null) return;
+        const remaining =
+          state.markedRemaining ?? (state.timerEnabled ? state.timerSeconds : 0);
+        set(buildAnswerPatch(state, state.selectedOption, remaining));
       },
 
       resolveSteal: (index) => {
@@ -650,6 +684,7 @@ export const useGameStore = create<GameState>()(
         mode: s.mode,
         teamNames: s.teamNames,
         totalRounds: s.totalRounds,
+        manualReveal: s.manualReveal,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();

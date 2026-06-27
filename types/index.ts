@@ -77,4 +77,6 @@ export interface GameConfig {
   mode: GameMode;
   teamNames: [string, string];
   totalRounds: number;
+  /** Marcar a resposta e revelar o resultado em dois passos (botão "Revelar"). */
+  manualReveal: boolean;
 }

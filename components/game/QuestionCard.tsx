@@ -18,6 +18,7 @@ export function QuestionCard() {
   const { burst } = useConfetti();
 
   const mode = useGameStore((s) => s.mode);
+  const manualReveal = useGameStore((s) => s.manualReveal);
   const current = useGameStore((s) => s.current);
   const answered = useGameStore((s) => s.answered);
   const selectedOption = useGameStore((s) => s.selectedOption);
@@ -31,6 +32,7 @@ export function QuestionCard() {
   const timerSeconds = useGameStore((s) => s.timerSeconds);
 
   const selectOption = useGameStore((s) => s.selectOption);
+  const revealResult = useGameStore((s) => s.revealResult);
   const timerExpired = useGameStore((s) => s.timerExpired);
   const nextRound = useGameStore((s) => s.nextRound);
   const finishGame = useGameStore((s) => s.finishGame);
@@ -39,11 +41,14 @@ export function QuestionCard() {
 
   const isVersus = mode === "versus";
 
+  // No modo manual, marcar a resposta congela o cronômetro até a revelação.
+  const markedPending = manualReveal && !answered && selectedOption !== null;
+
   const { remaining } = useTimer({
     seconds: timerSeconds,
     enabled: timerEnabled,
     resetKey: current?.num,
-    paused: answered,
+    paused: answered || markedPending,
     onExpire: timerExpired,
   });
 
@@ -122,10 +127,34 @@ export function QuestionCard() {
               answered={answered}
               isCorrect={i === current.correct}
               isSelected={i === selectedOption}
+              marked={!answered && i === selectedOption}
               onSelect={(idx) => selectOption(idx, remaining)}
             />
           ))}
         </div>
+      )}
+
+      {markedPending && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 flex flex-col items-center gap-2"
+        >
+          <p className="text-sm text-ink-soft">
+            Resposta marcada na alternativa{" "}
+            <strong className="text-gold-light">
+              {String.fromCharCode(65 + (selectedOption as number))}
+            </strong>
+            . Confirme para revelar o resultado.
+          </p>
+          <button
+            type="button"
+            onClick={revealResult}
+            className="rounded-2xl bg-gold-gradient px-8 py-4 font-display text-lg font-bold tracking-wide text-night shadow-gold-glow transition-transform hover:scale-[1.03] active:scale-95"
+          >
+            🔎 Revelar resultado
+          </button>
+        </motion.div>
       )}
 
       <AnimatePresence>

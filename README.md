@@ -15,6 +15,8 @@ Gincana Bíblica interativa da **Igreja Evangélica Pentecostal Presbiteriana**.
 - **Modo Solo (1 equipe)**: a experiência clássica de jogo contínuo.
 - **Pontuação e gamificação**: pontos por dificuldade (100/200/300), bônus de
   sequência (streak 🔥) e bônus de tempo.
+- **Revelação manual** (opcional, padrão ligada): a equipe marca a resposta e um
+  botão "🔎 Revelar resultado" mostra o acerto/erro — ideal para apresentador.
 - **Cronômetro opcional** por pergunta (20/30/45/60s) com anel regressivo.
 - **3 ajudas**: ✂️ Eliminar 2 · 🙏 Pastor · ⏭️ Pular (3x).
 - **Ranking local** (localStorage) com tela de resultado e confete.
