@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { QUESTION_COUNTS } from "@/data/questions";
@@ -33,9 +34,16 @@ export function WelcomeScreen() {
       <motion.div
         animate={{ scale: [1, 1.05, 1] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        className="text-6xl md:text-7xl"
+        className="drop-shadow-[0_0_28px_rgba(245,182,66,0.45)]"
       >
-        ✝️
+        <Image
+          src="/logo-iepp.png"
+          alt="Logo da Igreja Evangélica Pentecostal de Presbiteriana"
+          width={150}
+          height={150}
+          priority
+          className="h-28 w-auto md:h-36"
+        />
       </motion.div>
 
       <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight text-shimmer md:text-6xl lg:text-7xl">
@@ -43,7 +51,7 @@ export function WelcomeScreen() {
       </h1>
       <p className="mt-3 max-w-xl text-balance text-ink-soft md:text-lg">
         Momento de comunhão e conhecimento da Palavra de Deus — Igreja
-        Evangélica Pentecostal de Pinheiros.
+        Evangélica Pentecostal Presbiteriana.
       </p>
 
       {/* Seletor de modo */}

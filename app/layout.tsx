@@ -26,7 +26,7 @@ const numeric = Sora({
 export const metadata: Metadata = {
   title: "Desafio Bíblico — IEPP",
   description:
-    "Gincana Bíblica interativa da Igreja Evangélica Pentecostal de Pinheiros. Momento de comunhão e conhecimento da Palavra de Deus.",
+    "Gincana Bíblica interativa da Igreja Evangélica Pentecostal Presbiteriana. Momento de comunhão e conhecimento da Palavra de Deus.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0E0420",
+  themeColor: "#0A0608",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -52,8 +52,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+    // Tema de cores: "church" (preto/vermelho/dourado) é o padrão.
+    // Para voltar ao tema antigo (roxo/dourado), troque para data-theme="legacy".
     <html
       lang="pt-BR"
+      data-theme="church"
       className={`${display.variable} ${body.variable} ${numeric.variable}`}
     >
       <body>

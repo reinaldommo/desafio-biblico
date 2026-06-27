@@ -1,6 +1,6 @@
 # ✝️ Desafio Bíblico — IEPP
 
-Gincana Bíblica interativa da **Igreja Evangélica Pentecostal de Pinheiros**. Reconstruída com tecnologia moderna, visual "Dourado/Roxo celestial", gamificação completa e instalável como app (PWA).
+Gincana Bíblica interativa da **Igreja Evangélica Pentecostal Presbiteriana**. Reconstruída com tecnologia moderna, identidade visual da igreja (**preto · vermelho · dourado**), gamificação completa e instalável como app (PWA).
 
 > Momento de comunhão e conhecimento da Palavra de Deus. ✨
 
@@ -21,6 +21,9 @@ Gincana Bíblica interativa da **Igreja Evangélica Pentecostal de Pinheiros**. 
 - **Modo projetor/TV**: textos grandes, alto contraste, visual de palco.
 - **PWA**: instalável e funciona offline.
 - Animações premium com **Framer Motion** e efeitos de luz divina.
+- **Tema de cores** preto/vermelho/dourado (padrão `church`). Para voltar ao tema
+  antigo (roxo/dourado), troque `data-theme="church"` por `"legacy"` em
+  `app/layout.tsx` — ambas as paletas vivem em `app/globals.css`.
 
 ## 🛠️ Stack
 

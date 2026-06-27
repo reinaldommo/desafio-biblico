@@ -8,28 +8,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Cores temáticas via variáveis CSS (canais RGB) — ver app/globals.css.
+        // O tema é trocado pelo atributo data-theme no <html> (church | legacy).
         night: {
-          DEFAULT: "#0E0420",
-          800: "#150733",
-          700: "#1B0B3A",
+          DEFAULT: "rgb(var(--c-night) / <alpha-value>)",
+          800: "rgb(var(--c-night-800) / <alpha-value>)",
+          700: "rgb(var(--c-night-700) / <alpha-value>)",
         },
         royal: {
-          900: "#2E1065",
-          800: "#4C1D95",
-          700: "#6D28D9",
-          accent: "#A855F7",
+          900: "rgb(var(--c-royal-900) / <alpha-value>)",
+          800: "rgb(var(--c-royal-800) / <alpha-value>)",
+          700: "rgb(var(--c-royal-700) / <alpha-value>)",
+          accent: "rgb(var(--c-royal-accent) / <alpha-value>)",
         },
         gold: {
-          light: "#FFD56A",
-          DEFAULT: "#F5B642",
-          dark: "#C8932B",
-          glow: "#FFE9A8",
+          light: "rgb(var(--c-gold-light) / <alpha-value>)",
+          DEFAULT: "rgb(var(--c-gold) / <alpha-value>)",
+          dark: "rgb(var(--c-gold-dark) / <alpha-value>)",
+          glow: "rgb(var(--c-gold-glow) / <alpha-value>)",
         },
         success: "#34D399",
         danger: "#F43F5E",
         ink: {
-          DEFAULT: "#F8F5FF",
-          soft: "#CBB7E8",
+          DEFAULT: "rgb(var(--c-ink) / <alpha-value>)",
+          soft: "rgb(var(--c-ink-soft) / <alpha-value>)",
         },
       },
       fontFamily: {
@@ -39,18 +41,19 @@ const config: Config = {
       },
       boxShadow: {
         "gold-glow":
-          "0 0 24px rgba(245,182,66,0.45), 0 0 60px rgba(168,85,247,0.25)",
-        "purple-glow": "0 0 30px rgba(109,40,217,0.55)",
+          "0 0 24px rgb(var(--c-gold) / 0.45), 0 0 60px rgb(var(--c-royal-accent) / 0.25)",
+        "purple-glow": "0 0 30px rgb(var(--c-royal-700) / 0.55)",
         "success-glow": "0 0 28px rgba(52,211,153,0.55)",
         "danger-glow": "0 0 28px rgba(244,63,94,0.5)",
         glass: "0 8px 32px rgba(0,0,0,0.45)",
       },
       backgroundImage: {
         "gold-gradient":
-          "linear-gradient(135deg, #FFE9A8 0%, #F5B642 45%, #C8932B 100%)",
+          "linear-gradient(135deg, rgb(var(--c-gold-glow)) 0%, rgb(var(--c-gold)) 45%, rgb(var(--c-gold-dark)) 100%)",
         "stage-radial":
-          "radial-gradient(circle at 50% 0%, #2E1065 0%, #150733 45%, #0E0420 100%)",
-        "royal-gradient": "linear-gradient(135deg, #6D28D9 0%, #4C1D95 100%)",
+          "radial-gradient(circle at 50% 0%, rgb(var(--c-royal-900)) 0%, rgb(var(--c-night-800)) 45%, rgb(var(--c-night)) 100%)",
+        "royal-gradient":
+          "linear-gradient(135deg, rgb(var(--c-royal-700)) 0%, rgb(var(--c-royal-800)) 100%)",
       },
       keyframes: {
         "glow-pulse": {

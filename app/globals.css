@@ -2,11 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --night: #0e0420;
-  --gold: #f5b642;
-  --gold-light: #ffd56a;
-  --royal: #6d28d9;
+/*
+ * TEMA DE CORES
+ * Cada cor é um trio de canais RGB ("R G B") consumido pelo Tailwind como
+ * rgb(var(--c-x) / <alpha-value>), o que mantém os modificadores de opacidade.
+ *
+ * Padrão = "church" (preto · vermelho · dourado — cores da igreja).
+ * Backup  = data-theme="legacy" no <html> volta ao roxo/dourado original.
+ * Para reverter: troque data-theme="church" por "legacy" em app/layout.tsx.
+ */
+:root,
+:root[data-theme="church"] {
+  /* Fundos quase pretos (leve calor) */
+  --c-night: 10 6 8;
+  --c-night-800: 24 11 13;
+  --c-night-700: 34 15 18;
+  /* Acentos em vermelho (antigo "royal") */
+  --c-royal-900: 64 10 14;
+  --c-royal-800: 122 16 24;
+  --c-royal-700: 178 26 35;
+  --c-royal-accent: 220 38 38;
+  /* Dourado */
+  --c-gold-light: 255 213 106;
+  --c-gold: 245 182 66;
+  --c-gold-dark: 200 147 43;
+  --c-gold-glow: 255 233 168;
+  /* Texto (branco quente / dourado suave) */
+  --c-ink: 248 245 240;
+  --c-ink-soft: 214 196 168;
+  /* Brilhos do palco (fundo) */
+  --c-stage-top: 96 14 18;
+  --c-glow: 220 38 38;
+
+  --night: rgb(var(--c-night));
+  --gold: rgb(var(--c-gold));
+  --gold-light: rgb(var(--c-gold-light));
+  --royal: rgb(var(--c-royal-700));
+}
+
+/* BACKUP — paleta original (roxo/dourado celestial) */
+:root[data-theme="legacy"] {
+  --c-night: 14 4 32;
+  --c-night-800: 21 7 51;
+  --c-night-700: 27 11 58;
+  --c-royal-900: 46 16 101;
+  --c-royal-800: 76 29 149;
+  --c-royal-700: 109 40 217;
+  --c-royal-accent: 168 85 247;
+  --c-gold-light: 255 213 106;
+  --c-gold: 245 182 66;
+  --c-gold-dark: 200 147 43;
+  --c-gold-glow: 255 233 168;
+  --c-ink: 248 245 255;
+  --c-ink-soft: 203 183 232;
+  --c-stage-top: 59 15 122;
+  --c-glow: 168 85 247;
 }
 
 @layer base {
@@ -26,8 +76,12 @@
     position: fixed;
     inset: 0;
     z-index: -2;
-    background:
-      radial-gradient(circle at 50% -10%, #3b0f7a 0%, #1b0b3a 45%, #0e0420 80%);
+    background: radial-gradient(
+      circle at 50% -10%,
+      rgb(var(--c-stage-top)) 0%,
+      rgb(var(--c-night-700)) 45%,
+      rgb(var(--c-night)) 80%
+    );
   }
 
   body::after {
@@ -36,12 +90,15 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background:
-      radial-gradient(circle at 50% 120%, rgba(168, 85, 247, 0.18), transparent 60%);
+    background: radial-gradient(
+      circle at 50% 120%,
+      rgb(var(--c-glow) / 0.18),
+      transparent 60%
+    );
   }
 
   ::selection {
-    background: rgba(245, 182, 66, 0.35);
+    background: rgb(var(--c-gold) / 0.35);
     color: #fff;
   }
 
