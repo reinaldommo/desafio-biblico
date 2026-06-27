@@ -22,6 +22,25 @@ export const HELP_LIMITS = {
 
 export const TIMER_DEFAULT_SECONDS = 30;
 
+/** Configuração do modo VERSUS (2 equipes). */
+export const VERSUS_CONFIG = {
+  /** Opções de número de rodadas por equipe. */
+  roundOptions: [6, 8, 10, 12],
+  /** Padrão de rodadas por equipe. */
+  defaultRounds: 8,
+  /** A cada N rodadas, uma rodada relâmpago (pontos em dobro). */
+  relampagoEvery: 3,
+  /** Multiplicador da rodada relâmpago. */
+  relampagoMultiplier: 2,
+  /** Multiplicador da aposta (dobro ou nada). */
+  wagerMultiplier: 2,
+};
+
+export const VERSUS_DEFAULT_NAMES: [string, string] = [
+  "Leões de Judá",
+  "Águias de Sião",
+];
+
 export const RANKING_MAX_ENTRIES = 10;
 export const RANKING_STORAGE_KEY = "desafio-biblico:ranking";
 

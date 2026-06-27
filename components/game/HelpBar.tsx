@@ -5,7 +5,9 @@ import { HelpButton } from "./HelpButton";
 
 export function HelpBar() {
   const answered = useGameStore((s) => s.answered);
-  const helps = useGameStore((s) => s.helps);
+  const helps = useGameStore((s) =>
+    s.mode === "versus" ? s.teams[s.currentTeam].helps : s.helps,
+  );
   const eliminatedOptions = useGameStore((s) => s.eliminatedOptions);
   const useEliminate = useGameStore((s) => s.useEliminate);
   const usePastor = useGameStore((s) => s.usePastor);

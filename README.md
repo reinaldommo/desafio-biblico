@@ -6,7 +6,13 @@ Gincana Bíblica interativa da **Igreja Evangélica Pentecostal de Pinheiros**. 
 
 ## ✨ Recursos
 
-- **220 perguntas** bíblicas em 3 níveis (Fácil · Média · Difícil), com referências.
+- **340 perguntas** bíblicas em 3 níveis (Fácil · Média · Difícil), com referências.
+- **Modo Versus (2 equipes)** ⚔️: equipes se revezam por rodadas, com placar VS ao vivo,
+  tela de vencedor e ajudas independentes por equipe.
+  - 🎲 **Aposta** (dobro ou nada): antes de sortear, vale o dobro — acertou dobra, errou perde.
+  - 🔁 **Roubo (rebote)**: se a equipe da vez erra, a adversária pode roubar os pontos.
+  - ⚡ **Rodada relâmpago**: a cada 3 rodadas, todos os pontos valem em dobro.
+- **Modo Solo (1 equipe)**: a experiência clássica de jogo contínuo.
 - **Pontuação e gamificação**: pontos por dificuldade (100/200/300), bônus de
   sequência (streak 🔥) e bônus de tempo.
 - **Cronômetro opcional** por pergunta (20/30/45/60s) com anel regressivo.

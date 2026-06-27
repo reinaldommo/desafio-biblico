@@ -2,24 +2,30 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type {
   DrawCategory,
+  GameMode,
   GamePhase,
   HelpsState,
   Question,
   QuestionPool,
   ScoreEntry,
+  TeamIndex,
+  TeamState,
+  VersusResult,
 } from "@/types";
 import { questions } from "@/data/questions";
 import { pickRandom, removeQuestion, pickEliminations } from "@/lib/draw";
-import { computeScore } from "@/lib/scoring";
+import { computeScore, basePoints } from "@/lib/scoring";
 import { addToRanking } from "@/lib/ranking";
 import { randomPastorHint } from "@/lib/pastorHints";
 import {
   HELP_LIMITS,
   RANKING_MAX_ENTRIES,
   TIMER_DEFAULT_SECONDS,
+  VERSUS_CONFIG,
+  VERSUS_DEFAULT_NAMES,
 } from "@/lib/constants";
 
-/** Resultado da última rodada respondida (para feedback visual). */
+/** Resultado da última rodada respondida (modo solo, para feedback visual). */
 export interface LastResult {
   correct: boolean;
   pointsEarned: number;
@@ -35,6 +41,9 @@ interface GameState {
   timerEnabled: boolean;
   timerSeconds: number;
   teamName: string;
+  mode: GameMode;
+  teamNames: [string, string];
+  totalRounds: number;
 
   // Fase / progresso
   phase: GamePhase;
@@ -47,7 +56,7 @@ interface GameState {
   pastorHint: string | null;
   lastResult: LastResult | null;
 
-  // Gamificação
+  // Gamificação (modo solo)
   score: number;
   streak: number;
   maxStreak: number;
@@ -55,16 +64,35 @@ interface GameState {
   wrongCount: number;
   questionsPlayed: number;
 
-  // Ajudas (usos restantes)
+  // Ajudas (modo solo)
   helps: HelpsState;
+
+  // Estado do modo VERSUS
+  teams: [TeamState, TeamState];
+  currentTeam: TeamIndex;
+  turnIndex: number; // 0-based; cada turno = a vez de uma equipe
+  wagerActive: boolean;
+  stealPhase: boolean;
+  firstSelected: number | null; // alternativa (errada) da equipe da vez
+  versusResult: VersusResult | null;
 
   // Ranking persistido
   ranking: ScoreEntry[];
 
-  // Ações
+  // Ações comuns
   setHydrated: () => void;
-  setConfig: (cfg: Partial<{ timerEnabled: boolean; timerSeconds: number; teamName: string }>) => void;
+  setConfig: (
+    cfg: Partial<{
+      timerEnabled: boolean;
+      timerSeconds: number;
+      teamName: string;
+      mode: GameMode;
+      totalRounds: number;
+    }>,
+  ) => void;
+  setTeamName: (i: TeamIndex, name: string) => void;
   startGame: () => void;
+  startVersus: () => void;
   drawQuestion: (category: DrawCategory) => void;
   selectOption: (index: number, remainingSeconds?: number) => void;
   useEliminate: () => void;
@@ -74,8 +102,14 @@ interface GameState {
   nextRound: () => void;
   finishGame: () => void;
   saveScore: (teamName: string) => void;
+  saveVersus: () => void;
   resetGame: () => void;
   remaining: (category: DrawCategory) => number;
+
+  // Ações VERSUS
+  toggleWager: () => void;
+  resolveSteal: (index: number) => void;
+  nextTurn: () => void;
 }
 
 function freshPool(): QuestionPool {
@@ -86,6 +120,28 @@ function freshPool(): QuestionPool {
   };
 }
 
+function freshTeam(name: string): TeamState {
+  return {
+    name,
+    score: 0,
+    correct: 0,
+    wrong: 0,
+    streak: 0,
+    maxStreak: 0,
+    helps: { ...HELP_LIMITS },
+  };
+}
+
+/** Número da rodada (1-based) a partir do índice de turno. */
+export function roundOf(turnIndex: number): number {
+  return Math.floor(turnIndex / 2) + 1;
+}
+
+/** A rodada é relâmpago (pontos em dobro)? */
+export function isRelampago(turnIndex: number): boolean {
+  return roundOf(turnIndex) % VERSUS_CONFIG.relampagoEvery === 0;
+}
+
 const initialRoundState = {
   current: null as Question | null,
   currentCategory: null as DrawCategory | null,
@@ -94,6 +150,9 @@ const initialRoundState = {
   eliminatedOptions: [] as number[],
   pastorHint: null as string | null,
   lastResult: null as LastResult | null,
+  stealPhase: false,
+  firstSelected: null as number | null,
+  versusResult: null as VersusResult | null,
 };
 
 export const useGameStore = create<GameState>()(
@@ -104,6 +163,9 @@ export const useGameStore = create<GameState>()(
       timerEnabled: false,
       timerSeconds: TIMER_DEFAULT_SECONDS,
       teamName: "",
+      mode: "versus",
+      teamNames: [...VERSUS_DEFAULT_NAMES] as [string, string],
+      totalRounds: VERSUS_CONFIG.defaultRounds,
 
       phase: "welcome",
       available: freshPool(),
@@ -118,14 +180,27 @@ export const useGameStore = create<GameState>()(
 
       helps: { ...HELP_LIMITS },
 
+      teams: [freshTeam(VERSUS_DEFAULT_NAMES[0]), freshTeam(VERSUS_DEFAULT_NAMES[1])],
+      currentTeam: 0,
+      turnIndex: 0,
+      wagerActive: false,
+
       ranking: [],
 
       setHydrated: () => set({ hasHydrated: true }),
 
       setConfig: (cfg) => set((s) => ({ ...s, ...cfg })),
 
+      setTeamName: (i, name) =>
+        set((s) => {
+          const teamNames = [...s.teamNames] as [string, string];
+          teamNames[i] = name;
+          return { teamNames };
+        }),
+
       startGame: () =>
         set({
+          mode: "solo",
           phase: "playing",
           available: freshPool(),
           ...initialRoundState,
@@ -137,6 +212,23 @@ export const useGameStore = create<GameState>()(
           questionsPlayed: 0,
           helps: { ...HELP_LIMITS },
         }),
+
+      startVersus: () => {
+        const { teamNames } = get();
+        set({
+          mode: "versus",
+          phase: "playing",
+          available: freshPool(),
+          ...initialRoundState,
+          teams: [
+            freshTeam(teamNames[0].trim() || "Equipe 1"),
+            freshTeam(teamNames[1].trim() || "Equipe 2"),
+          ],
+          currentTeam: 0,
+          turnIndex: 0,
+          wagerActive: false,
+        });
+      },
 
       drawQuestion: (category) => {
         const { available } = get();
@@ -163,6 +255,9 @@ export const useGameStore = create<GameState>()(
           eliminatedOptions: [],
           pastorHint: null,
           lastResult: null,
+          stealPhase: false,
+          firstSelected: null,
+          versusResult: null,
         });
       },
 
@@ -172,9 +267,88 @@ export const useGameStore = create<GameState>()(
         if (!q || state.answered) return;
 
         const correct = index === q.correct;
-        const newStreak = correct ? state.streak + 1 : 0;
         const remaining =
           remainingSeconds ?? (state.timerEnabled ? state.timerSeconds : 0);
+
+        // ───────────── Modo VERSUS ─────────────
+        if (state.mode === "versus") {
+          const ct = state.currentTeam;
+          const team = state.teams[ct];
+          const relampago = isRelampago(state.turnIndex);
+          const relMult = relampago ? VERSUS_CONFIG.relampagoMultiplier : 1;
+          const teams = [...state.teams] as [TeamState, TeamState];
+
+          if (correct) {
+            const newStreak = team.streak + 1;
+            const baseScore = computeScore({
+              difficulty: q.difficulty,
+              streak: newStreak,
+              timerEnabled: state.timerEnabled,
+              remaining,
+              total: state.timerSeconds,
+            });
+            const mult = relMult * (state.wagerActive ? VERSUS_CONFIG.wagerMultiplier : 1);
+            const points = Math.round(baseScore * mult);
+            teams[ct] = {
+              ...team,
+              score: team.score + points,
+              correct: team.correct + 1,
+              streak: newStreak,
+              maxStreak: Math.max(team.maxStreak, newStreak),
+            };
+            set({
+              teams,
+              answered: true,
+              selectedOption: index,
+              stealPhase: false,
+              versusResult: {
+                outcome: "correct",
+                scoringTeam: ct,
+                points,
+                penalty: 0,
+                correctIndex: q.correct,
+                selectedIndex: index,
+                stealIndex: null,
+                wager: state.wagerActive,
+                relampago,
+              },
+            });
+            return;
+          }
+
+          // Errou → aplica penalidade da aposta e abre o roubo para a adversária
+          const penalty = state.wagerActive
+            ? Math.round(basePoints(q.difficulty) * relMult)
+            : 0;
+          teams[ct] = {
+            ...team,
+            score: Math.max(0, team.score - penalty),
+            wrong: team.wrong + 1,
+            streak: 0,
+          };
+          set({
+            teams,
+            answered: true,
+            selectedOption: index,
+            stealPhase: true,
+            firstSelected: index,
+            versusResult: {
+              outcome: "missed",
+              scoringTeam: null,
+              points: 0,
+              penalty,
+              correctIndex: q.correct,
+              selectedIndex: index,
+              stealIndex: null,
+              wager: state.wagerActive,
+              relampago,
+            },
+          });
+          return;
+        }
+
+        // ───────────── Modo SOLO ─────────────
+        const newStreak = correct ? state.streak + 1 : 0;
         const pointsEarned = correct
           ? computeScore({
               difficulty: q.difficulty,
@@ -204,33 +378,116 @@ export const useGameStore = create<GameState>()(
         });
       },
 
+      resolveSteal: (index) => {
+        const state = get();
+        const q = state.current;
+        if (!q || !state.stealPhase || state.mode !== "versus") return;
+
+        const ct = state.currentTeam;
+        const opp = (1 - ct) as TeamIndex;
+        const relampago = isRelampago(state.turnIndex);
+        const relMult = relampago ? VERSUS_CONFIG.relampagoMultiplier : 1;
+        const correct = index === q.correct;
+        const teams = [...state.teams] as [TeamState, TeamState];
+
+        if (correct) {
+          const points = Math.round(basePoints(q.difficulty) * relMult);
+          teams[opp] = {
+            ...teams[opp],
+            score: teams[opp].score + points,
+            correct: teams[opp].correct + 1,
+          };
+          set({
+            teams,
+            stealPhase: false,
+            versusResult: {
+              ...(state.versusResult as VersusResult),
+              outcome: "stolen",
+              scoringTeam: opp,
+              points,
+              stealIndex: index,
+            },
+          });
+          return;
+        }
+
+        set({
+          stealPhase: false,
+          versusResult: {
+            ...(state.versusResult as VersusResult),
+            outcome: "missed",
+            scoringTeam: null,
+            stealIndex: index,
+          },
+        });
+      },
+
       useEliminate: () => {
         const state = get();
+        const helps = state.mode === "versus" ? state.teams[state.currentTeam].helps : state.helps;
         if (
           !state.current ||
           state.answered ||
-          state.helps.eliminate <= 0 ||
+          helps.eliminate <= 0 ||
           state.eliminatedOptions.length > 0
         )
           return;
+
+        const eliminatedOptions = pickEliminations(state.current, 2);
+        if (state.mode === "versus") {
+          const teams = [...state.teams] as [TeamState, TeamState];
+          const ct = state.currentTeam;
+          teams[ct] = {
+            ...teams[ct],
+            helps: { ...teams[ct].helps, eliminate: teams[ct].helps.eliminate - 1 },
+          };
+          set({ eliminatedOptions, teams });
+          return;
+        }
         set({
-          eliminatedOptions: pickEliminations(state.current, 2),
+          eliminatedOptions,
           helps: { ...state.helps, eliminate: state.helps.eliminate - 1 },
         });
       },
 
       usePastor: () => {
         const state = get();
-        if (!state.current || state.answered || state.helps.pastor <= 0) return;
+        const helps = state.mode === "versus" ? state.teams[state.currentTeam].helps : state.helps;
+        if (!state.current || state.answered || helps.pastor <= 0) return;
+
+        const pastorHint = randomPastorHint();
+        if (state.mode === "versus") {
+          const teams = [...state.teams] as [TeamState, TeamState];
+          const ct = state.currentTeam;
+          teams[ct] = {
+            ...teams[ct],
+            helps: { ...teams[ct].helps, pastor: teams[ct].helps.pastor - 1 },
+          };
+          set({ pastorHint, teams });
+          return;
+        }
         set({
-          pastorHint: randomPastorHint(),
+          pastorHint,
           helps: { ...state.helps, pastor: state.helps.pastor - 1 },
         });
       },
 
       useSkip: () => {
         const state = get();
-        if (!state.current || state.helps.skip <= 0) return;
+        const helps = state.mode === "versus" ? state.teams[state.currentTeam].helps : state.helps;
+        if (!state.current || helps.skip <= 0) return;
+
+        if (state.mode === "versus") {
+          const teams = [...state.teams] as [TeamState, TeamState];
+          const ct = state.currentTeam;
+          teams[ct] = {
+            ...teams[ct],
+            helps: { ...teams[ct].helps, skip: teams[ct].helps.skip - 1 },
+          };
+          // Descarta a pergunta atual; a equipe da vez sorteia outra (mantém a aposta).
+          set({ teams, ...initialRoundState });
+          return;
+        }
         set({
           helps: { ...state.helps, skip: state.helps.skip - 1 },
           ...initialRoundState,
@@ -241,6 +498,45 @@ export const useGameStore = create<GameState>()(
         const state = get();
         const q = state.current;
         if (!q || state.answered) return;
+
+        // ───────────── Modo VERSUS ─────────────
+        if (state.mode === "versus") {
+          const ct = state.currentTeam;
+          const team = state.teams[ct];
+          const relampago = isRelampago(state.turnIndex);
+          const relMult = relampago ? VERSUS_CONFIG.relampagoMultiplier : 1;
+          const penalty = state.wagerActive
+            ? Math.round(basePoints(q.difficulty) * relMult)
+            : 0;
+          const teams = [...state.teams] as [TeamState, TeamState];
+          teams[ct] = {
+            ...team,
+            score: Math.max(0, team.score - penalty),
+            wrong: team.wrong + 1,
+            streak: 0,
+          };
+          set({
+            teams,
+            answered: true,
+            selectedOption: null,
+            stealPhase: true,
+            firstSelected: null,
+            versusResult: {
+              outcome: "missed",
+              scoringTeam: null,
+              points: 0,
+              penalty,
+              correctIndex: q.correct,
+              selectedIndex: null,
+              stealIndex: null,
+              wager: state.wagerActive,
+              relampago,
+            },
+          });
+          return;
+        }
+
+        // ───────────── Modo SOLO ─────────────
         set({
           answered: true,
           selectedOption: null,
@@ -258,6 +554,22 @@ export const useGameStore = create<GameState>()(
       },
 
       nextRound: () => set({ ...initialRoundState }),
+
+      nextTurn: () => {
+        const state = get();
+        const nextIndex = state.turnIndex + 1;
+        // Cada equipe joga `totalRounds` turnos → total de turnos = totalRounds * 2.
+        if (nextIndex >= state.totalRounds * 2) {
+          set({ phase: "result", ...initialRoundState });
+          return;
+        }
+        set({
+          turnIndex: nextIndex,
+          currentTeam: (nextIndex % 2) as TeamIndex,
+          wagerActive: false,
+          ...initialRoundState,
+        });
+      },
 
       finishGame: () => set({ phase: "result", ...initialRoundState }),
 
@@ -278,8 +590,29 @@ export const useGameStore = create<GameState>()(
         set({ ranking: addToRanking(state.ranking, entry).slice(0, RANKING_MAX_ENTRIES) });
       },
 
+      saveVersus: () => {
+        const state = get();
+        const now = new Date().toISOString();
+        const makeEntry = (t: TeamState): ScoreEntry => ({
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+          teamName: t.name.trim() || "Equipe",
+          score: t.score,
+          maxStreak: t.maxStreak,
+          correct: t.correct,
+          wrong: t.wrong,
+          date: now,
+        });
+        let ranking = state.ranking;
+        ranking = addToRanking(ranking, makeEntry(state.teams[0]));
+        ranking = addToRanking(ranking, makeEntry(state.teams[1]));
+        set({ ranking: ranking.slice(0, RANKING_MAX_ENTRIES) });
+      },
+
       resetGame: () =>
-        set({
+        set((s) => ({
           phase: "welcome",
           available: freshPool(),
           ...initialRoundState,
@@ -290,7 +623,11 @@ export const useGameStore = create<GameState>()(
           wrongCount: 0,
           questionsPlayed: 0,
           helps: { ...HELP_LIMITS },
-        }),
+          teams: [freshTeam(s.teamNames[0]), freshTeam(s.teamNames[1])],
+          currentTeam: 0,
+          turnIndex: 0,
+          wagerActive: false,
+        })),
 
       remaining: (category) => {
         const { available } = get();
@@ -298,16 +635,21 @@ export const useGameStore = create<GameState>()(
           ? available.easy.length + available.medium.length
           : available.hard.length;
       },
+
+      toggleWager: () => set((s) => ({ wagerActive: !s.wagerActive })),
     }),
     {
       name: "desafio-biblico:state",
       storage: createJSONStorage(() => localStorage),
-      // Persistir apenas ranking + config (não o tick do jogo nem o timer).
+      // Persistir apenas ranking + config (não o andamento do jogo).
       partialize: (s) => ({
         ranking: s.ranking,
         timerEnabled: s.timerEnabled,
         timerSeconds: s.timerSeconds,
         teamName: s.teamName,
+        mode: s.mode,
+        teamNames: s.teamNames,
+        totalRounds: s.totalRounds,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();

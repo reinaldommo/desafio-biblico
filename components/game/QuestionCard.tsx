@@ -11,17 +11,22 @@ import { OptionButton } from "./OptionButton";
 import { HelpBar } from "./HelpBar";
 import { PastorHint } from "./PastorHint";
 import { AnswerReveal } from "./AnswerReveal";
+import { VersusReveal } from "./VersusReveal";
 
 export function QuestionCard() {
   const reduce = useReducedMotion();
   const { burst } = useConfetti();
 
+  const mode = useGameStore((s) => s.mode);
   const current = useGameStore((s) => s.current);
   const answered = useGameStore((s) => s.answered);
   const selectedOption = useGameStore((s) => s.selectedOption);
   const eliminatedOptions = useGameStore((s) => s.eliminatedOptions);
   const pastorHint = useGameStore((s) => s.pastorHint);
   const lastResult = useGameStore((s) => s.lastResult);
+  const versusResult = useGameStore((s) => s.versusResult);
+  const stealPhase = useGameStore((s) => s.stealPhase);
+  const wagerActive = useGameStore((s) => s.wagerActive);
   const timerEnabled = useGameStore((s) => s.timerEnabled);
   const timerSeconds = useGameStore((s) => s.timerSeconds);
 
@@ -32,6 +37,8 @@ export function QuestionCard() {
   const remainingFn = useGameStore((s) => s.remaining);
   const currentCategory = useGameStore((s) => s.currentCategory);
 
+  const isVersus = mode === "versus";
+
   const { remaining } = useTimer({
     seconds: timerSeconds,
     enabled: timerEnabled,
@@ -40,15 +47,25 @@ export function QuestionCard() {
     onExpire: timerExpired,
   });
 
-  // Confete ao acertar
+  // Confete ao pontuar
   useEffect(() => {
-    if (answered && lastResult?.correct && !reduce) burst();
-  }, [answered, lastResult, burst, reduce]);
+    if (reduce) return;
+    if (isVersus) {
+      if (answered && !stealPhase && versusResult?.scoringTeam != null) burst();
+    } else if (answered && lastResult?.correct) {
+      burst();
+    }
+  }, [answered, stealPhase, versusResult, lastResult, isVersus, burst, reduce]);
 
   if (!current) return null;
 
-  const hasMore =
-    currentCategory != null && remainingFn(currentCategory) > 0;
+  const hasMore = currentCategory != null && remainingFn(currentCategory) > 0;
+  const showGrid = !isVersus || !answered;
+  const wrongShake = answered && !reduce && (
+    isVersus
+      ? versusResult?.outcome === "missed"
+      : lastResult != null && !lastResult.correct
+  );
 
   return (
     <motion.div
@@ -61,20 +78,23 @@ export function QuestionCard() {
     >
       <div className="mb-4 flex items-center justify-between gap-4">
         <Badge difficulty={current.difficulty} />
-        <span className="font-numeric text-sm text-ink-soft">
-          Pergunta #{current.num}
-        </span>
+        <div className="flex items-center gap-2">
+          {isVersus && wagerActive && (
+            <span className="rounded-full bg-gold/15 px-2.5 py-1 text-xs font-bold text-gold-light">
+              🎲 Aposta
+            </span>
+          )}
+          <span className="font-numeric text-sm text-ink-soft">
+            Pergunta #{current.num}
+          </span>
+        </div>
         {timerEnabled && !answered && (
           <Timer remaining={remaining} total={timerSeconds} />
         )}
       </div>
 
       <motion.h2
-        animate={
-          answered && lastResult && !lastResult.correct && !reduce
-            ? { x: [0, -8, 8, -6, 6, 0] }
-            : {}
-        }
+        animate={wrongShake ? { x: [0, -8, 8, -6, 6, 0] } : {}}
         className="text-balance text-center font-display text-2xl font-semibold leading-snug text-ink md:text-4xl lg:text-[2.6rem]"
       >
         {current.q}
@@ -90,24 +110,27 @@ export function QuestionCard() {
         {pastorHint && !answered && <PastorHint hint={pastorHint} />}
       </AnimatePresence>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-2 md:gap-4">
-        {current.options.map((opt, i) => (
-          <OptionButton
-            key={i}
-            index={i}
-            label={String.fromCharCode(65 + i)}
-            text={opt}
-            eliminated={eliminatedOptions.includes(i)}
-            answered={answered}
-            isCorrect={i === current.correct}
-            isSelected={i === selectedOption}
-            onSelect={(idx) => selectOption(idx, remaining)}
-          />
-        ))}
-      </div>
+      {showGrid && (
+        <div className="mt-6 grid gap-3 md:grid-cols-2 md:gap-4">
+          {current.options.map((opt, i) => (
+            <OptionButton
+              key={i}
+              index={i}
+              label={String.fromCharCode(65 + i)}
+              text={opt}
+              eliminated={eliminatedOptions.includes(i)}
+              answered={answered}
+              isCorrect={i === current.correct}
+              isSelected={i === selectedOption}
+              onSelect={(idx) => selectOption(idx, remaining)}
+            />
+          ))}
+        </div>
+      )}
 
       <AnimatePresence>
-        {answered && lastResult && (
+        {answered && isVersus && <VersusReveal question={current} />}
+        {answered && !isVersus && lastResult && (
           <AnswerReveal
             question={current}
             result={lastResult}
