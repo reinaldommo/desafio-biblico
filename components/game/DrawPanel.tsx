@@ -15,14 +15,14 @@ export function DrawPanel() {
 
   const mode = useGameStore((s) => s.mode);
   const currentTeam = useGameStore((s) => s.currentTeam);
-  const teamName = useGameStore((s) => (mode === "versus" ? s.teams[currentTeam].name : ""));
+  const teamName = useGameStore((s) => (mode !== "solo" ? s.teams[currentTeam].name : ""));
   const turnIndex = useGameStore((s) => s.turnIndex);
   const totalRounds = useGameStore((s) => s.totalRounds);
   const wagerActive = useGameStore((s) => s.wagerActive);
   const toggleWager = useGameStore((s) => s.toggleWager);
 
-  const isVersus = mode === "versus";
-  const relampago = isVersus && isRelampago(turnIndex);
+  const isTeam = mode !== "solo";
+  const relampago = mode === "versus" && isRelampago(turnIndex);
   const round = roundOf(turnIndex);
 
   return (
@@ -31,7 +31,7 @@ export function DrawPanel() {
       animate={{ opacity: 1, y: 0 }}
       className="glass-strong mx-auto w-full max-w-2xl rounded-3xl p-6 text-center md:p-10"
     >
-      {isVersus ? (
+      {isTeam ? (
         <>
           <motion.p
             key={`${currentTeam}-${turnIndex}`}
@@ -49,7 +49,13 @@ export function DrawPanel() {
               ⚡ Rodada Relâmpago — vale o dobro!
             </p>
           )}
+          {mode === "passa" && (
+            <p className="mt-2 text-sm text-ink-soft">
+              🔁 A equipe pode responder ou passar a pergunta para a adversária.
+            </p>
+          )}
 
+          {mode === "versus" && (
           <button
             type="button"
             onClick={toggleWager}
@@ -77,6 +83,7 @@ export function DrawPanel() {
               />
             </span>
           </button>
+          )}
         </>
       ) : (
         <>

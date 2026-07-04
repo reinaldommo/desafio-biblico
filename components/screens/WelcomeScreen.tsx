@@ -21,9 +21,12 @@ export function WelcomeScreen() {
   const setTeamName = useGameStore((s) => s.setTeamName);
   const startGame = useGameStore((s) => s.startGame);
   const startVersus = useGameStore((s) => s.startVersus);
+  const startPassa = useGameStore((s) => s.startPassa);
   const [showRanking, setShowRanking] = useState(false);
 
   const isVersus = mode === "versus";
+  const isPassa = mode === "passa";
+  const isTeam = mode !== "solo";
 
   return (
     <motion.div
@@ -56,29 +59,31 @@ export function WelcomeScreen() {
       </p>
 
       {/* Seletor de modo */}
-      <div className="glass mt-8 inline-flex rounded-2xl p-1.5">
-        <button
-          type="button"
-          onClick={() => setConfig({ mode: "versus" })}
-          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors md:text-base ${
-            isVersus ? "bg-gold-gradient text-night" : "text-ink-soft hover:text-ink"
-          }`}
-        >
-          ⚔️ 2 Equipes (Versus)
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfig({ mode: "solo" })}
-          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors md:text-base ${
-            !isVersus ? "bg-gold-gradient text-night" : "text-ink-soft hover:text-ink"
-          }`}
-        >
-          👤 1 Equipe
-        </button>
+      <div className="glass mt-8 inline-flex flex-wrap justify-center rounded-2xl p-1.5">
+        {(
+          [
+            { value: "versus", label: "⚔️ Versus" },
+            { value: "passa", label: "🔁 Passa e Repassa" },
+            { value: "solo", label: "👤 1 Equipe" },
+          ] as const
+        ).map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setConfig({ mode: opt.value })}
+            className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors md:text-base ${
+              mode === opt.value
+                ? "bg-gold-gradient text-night"
+                : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       <div className="glass mt-5 w-full rounded-3xl p-6 md:p-8">
-        {isVersus ? (
+        {isTeam ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-2 block text-left text-sm font-medium text-gold-light">
@@ -120,7 +125,7 @@ export function WelcomeScreen() {
           </>
         )}
 
-        {isVersus && (
+        {isTeam && (
           <div className="mt-5 flex flex-col gap-2 text-left">
             <span className="text-sm font-medium text-ink-soft">
               🔁 Rodadas por equipe
@@ -221,6 +226,18 @@ export function WelcomeScreen() {
               <li>✂️🙏⏭️ Cada equipe tem suas próprias ajudas.</li>
             </ul>
           </>
+        ) : isPassa ? (
+          <>
+            <p className="mb-2 font-display text-gold-light">🔁 Como funciona o Passa e Repassa</p>
+            <ul className="space-y-1.5">
+              <li>🔄 As equipes se revezam; a equipe da vez recebe a pergunta sorteada.</li>
+              <li>↪️ <strong className="text-ink">Passar</strong> — se não souber, a equipe passa a pergunta para a adversária.</li>
+              <li>↩️ <strong className="text-ink">Repassar</strong> — a adversária pode devolver; aí não dá mais para passar.</li>
+              <li>🎭 <strong className="text-ink">Desafio</strong> — quem ficou com a pergunta pode pagar um desafio divertido; cumpriu, ganha os pontos da pergunta.</li>
+              <li>❌ Errou ou estourou o tempo: ninguém pontua.</li>
+              <li>✂️🙏⏭️ Cada equipe tem suas próprias ajudas — quem está com a pergunta usa as suas.</li>
+            </ul>
+          </>
         ) : (
           <>
             <p className="mb-2 font-display text-gold-light">🎁 Ajudas disponíveis</p>
@@ -239,8 +256,16 @@ export function WelcomeScreen() {
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Button variant="gold" size="xl" onClick={isVersus ? startVersus : startGame}>
-          {isVersus ? "⚔️ Iniciar a Disputa" : "▶️ Começar o Desafio"}
+        <Button
+          variant="gold"
+          size="xl"
+          onClick={isVersus ? startVersus : isPassa ? startPassa : startGame}
+        >
+          {isVersus
+            ? "⚔️ Iniciar a Disputa"
+            : isPassa
+              ? "🔁 Iniciar Passa e Repassa"
+              : "▶️ Começar o Desafio"}
         </Button>
         <Button variant="ghost" size="xl" onClick={() => setShowRanking(true)}>
           🏆 Ver Ranking

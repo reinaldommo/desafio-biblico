@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type {
+  Challenge,
   DrawCategory,
   GameMode,
   GamePhase,
@@ -13,6 +14,7 @@ import type {
   VersusResult,
 } from "@/types";
 import { questions } from "@/data/questions";
+import { challenges } from "@/data/challenges";
 import { pickRandom, removeQuestion, pickEliminations } from "@/lib/draw";
 import { computeScore, basePoints } from "@/lib/scoring";
 import { addToRanking } from "@/lib/ranking";
@@ -78,6 +80,12 @@ interface GameState {
   firstSelected: number | null; // alternativa (errada) da equipe da vez
   versusResult: VersusResult | null;
 
+  // Estado do modo PASSA E REPASSA
+  holderTeam: TeamIndex; // equipe que "segura" a pergunta agora
+  passCount: number; // 0 = equipe da vez; 1 = passou; 2 = repassou (não passa mais)
+  challenge: Challenge | null; // desafio ativo aguardando julgamento
+  challengePool: Challenge[]; // desafios ainda não sorteados na partida
+
   // Ranking persistido
   ranking: ScoreEntry[];
 
@@ -114,6 +122,12 @@ interface GameState {
   toggleWager: () => void;
   resolveSteal: (index: number) => void;
   nextTurn: () => void;
+
+  // Ações PASSA E REPASSA
+  startPassa: () => void;
+  passQuestion: () => void;
+  acceptChallenge: () => void;
+  resolveChallenge: (fulfilled: boolean) => void;
 }
 
 function freshPool(): QuestionPool {
@@ -146,6 +160,13 @@ export function isRelampago(turnIndex: number): boolean {
   return roundOf(turnIndex) % VERSUS_CONFIG.relampagoEvery === 0;
 }
 
+/** Equipe cujas ajudas valem agora (null = modo solo). */
+function helpTeam(s: GameState): TeamIndex | null {
+  if (s.mode === "versus") return s.currentTeam;
+  if (s.mode === "passa") return s.holderTeam;
+  return null;
+}
+
 const initialRoundState = {
   current: null as Question | null,
   currentCategory: null as DrawCategory | null,
@@ -158,6 +179,8 @@ const initialRoundState = {
   stealPhase: false,
   firstSelected: null as number | null,
   versusResult: null as VersusResult | null,
+  passCount: 0,
+  challenge: null as Challenge | null,
 };
 
 /**
@@ -171,6 +194,66 @@ function buildAnswerPatch(
 ): Partial<GameState> {
   const q = state.current as Question;
   const correct = index === q.correct;
+
+  // ───────────── Modo PASSA E REPASSA ─────────────
+  if (state.mode === "passa") {
+    const ht = state.holderTeam;
+    const team = state.teams[ht];
+    const teams = [...state.teams] as [TeamState, TeamState];
+
+    if (correct) {
+      const newStreak = team.streak + 1;
+      const points = computeScore({
+        difficulty: q.difficulty,
+        streak: newStreak,
+        timerEnabled: state.timerEnabled,
+        remaining,
+        total: state.timerSeconds,
+      });
+      teams[ht] = {
+        ...team,
+        score: team.score + points,
+        correct: team.correct + 1,
+        streak: newStreak,
+        maxStreak: Math.max(team.maxStreak, newStreak),
+      };
+      return {
+        teams,
+        answered: true,
+        selectedOption: index,
+        versusResult: {
+          outcome: "correct",
+          scoringTeam: ht,
+          points,
+          penalty: 0,
+          correctIndex: q.correct,
+          selectedIndex: index,
+          stealIndex: null,
+          wager: false,
+          relampago: false,
+        },
+      };
+    }
+
+    // Errou → ninguém pontua (sem roubo neste modo; passar é a mecânica entre equipes).
+    teams[ht] = { ...team, wrong: team.wrong + 1, streak: 0 };
+    return {
+      teams,
+      answered: true,
+      selectedOption: index,
+      versusResult: {
+        outcome: "missed",
+        scoringTeam: null,
+        points: 0,
+        penalty: 0,
+        correctIndex: q.correct,
+        selectedIndex: index,
+        stealIndex: null,
+        wager: false,
+        relampago: false,
+      },
+    };
+  }
 
   // ───────────── Modo VERSUS ─────────────
   if (state.mode === "versus") {
@@ -309,6 +392,9 @@ export const useGameStore = create<GameState>()(
       turnIndex: 0,
       wagerActive: false,
 
+      holderTeam: 0,
+      challengePool: [],
+
       ranking: [],
 
       setHydrated: () => set({ hasHydrated: true }),
@@ -354,6 +440,25 @@ export const useGameStore = create<GameState>()(
         });
       },
 
+      startPassa: () => {
+        const { teamNames } = get();
+        set({
+          mode: "passa",
+          phase: "playing",
+          available: freshPool(),
+          ...initialRoundState,
+          teams: [
+            freshTeam(teamNames[0].trim() || "Equipe 1"),
+            freshTeam(teamNames[1].trim() || "Equipe 2"),
+          ],
+          currentTeam: 0,
+          turnIndex: 0,
+          wagerActive: false,
+          holderTeam: 0,
+          challengePool: [...challenges],
+        });
+      },
+
       drawQuestion: (category) => {
         const { available } = get();
         const pool =
@@ -382,6 +487,9 @@ export const useGameStore = create<GameState>()(
           stealPhase: false,
           firstSelected: null,
           versusResult: null,
+          holderTeam: get().currentTeam,
+          passCount: 0,
+          challenge: null,
         });
       },
 
@@ -458,22 +566,23 @@ export const useGameStore = create<GameState>()(
 
       useEliminate: () => {
         const state = get();
-        const helps = state.mode === "versus" ? state.teams[state.currentTeam].helps : state.helps;
+        const ht = helpTeam(state);
+        const helps = ht !== null ? state.teams[ht].helps : state.helps;
         if (
           !state.current ||
           state.answered ||
+          state.challenge !== null ||
           helps.eliminate <= 0 ||
           state.eliminatedOptions.length > 0
         )
           return;
 
         const eliminatedOptions = pickEliminations(state.current, 2);
-        if (state.mode === "versus") {
+        if (ht !== null) {
           const teams = [...state.teams] as [TeamState, TeamState];
-          const ct = state.currentTeam;
-          teams[ct] = {
-            ...teams[ct],
-            helps: { ...teams[ct].helps, eliminate: teams[ct].helps.eliminate - 1 },
+          teams[ht] = {
+            ...teams[ht],
+            helps: { ...teams[ht].helps, eliminate: teams[ht].helps.eliminate - 1 },
           };
           set({ eliminatedOptions, teams });
           return;
@@ -486,16 +595,17 @@ export const useGameStore = create<GameState>()(
 
       usePastor: () => {
         const state = get();
-        const helps = state.mode === "versus" ? state.teams[state.currentTeam].helps : state.helps;
-        if (!state.current || state.answered || helps.pastor <= 0) return;
+        const ht = helpTeam(state);
+        const helps = ht !== null ? state.teams[ht].helps : state.helps;
+        if (!state.current || state.answered || state.challenge !== null || helps.pastor <= 0)
+          return;
 
         const pastorHint = randomPastorHint();
-        if (state.mode === "versus") {
+        if (ht !== null) {
           const teams = [...state.teams] as [TeamState, TeamState];
-          const ct = state.currentTeam;
-          teams[ct] = {
-            ...teams[ct],
-            helps: { ...teams[ct].helps, pastor: teams[ct].helps.pastor - 1 },
+          teams[ht] = {
+            ...teams[ht],
+            helps: { ...teams[ht].helps, pastor: teams[ht].helps.pastor - 1 },
           };
           set({ pastorHint, teams });
           return;
@@ -508,15 +618,15 @@ export const useGameStore = create<GameState>()(
 
       useSkip: () => {
         const state = get();
-        const helps = state.mode === "versus" ? state.teams[state.currentTeam].helps : state.helps;
-        if (!state.current || helps.skip <= 0) return;
+        const ht = helpTeam(state);
+        const helps = ht !== null ? state.teams[ht].helps : state.helps;
+        if (!state.current || state.challenge !== null || helps.skip <= 0) return;
 
-        if (state.mode === "versus") {
+        if (ht !== null) {
           const teams = [...state.teams] as [TeamState, TeamState];
-          const ct = state.currentTeam;
-          teams[ct] = {
-            ...teams[ct],
-            helps: { ...teams[ct].helps, skip: teams[ct].helps.skip - 1 },
+          teams[ht] = {
+            ...teams[ht],
+            helps: { ...teams[ht].helps, skip: teams[ht].helps.skip - 1 },
           };
           // Descarta a pergunta atual; a equipe da vez sorteia outra (mantém a aposta).
           set({ teams, ...initialRoundState });
@@ -532,6 +642,30 @@ export const useGameStore = create<GameState>()(
         const state = get();
         const q = state.current;
         if (!q || state.answered) return;
+
+        // ───────────── Modo PASSA E REPASSA ─────────────
+        if (state.mode === "passa") {
+          const ht = state.holderTeam;
+          const teams = [...state.teams] as [TeamState, TeamState];
+          teams[ht] = { ...teams[ht], wrong: teams[ht].wrong + 1, streak: 0 };
+          set({
+            teams,
+            answered: true,
+            selectedOption: null,
+            versusResult: {
+              outcome: "missed",
+              scoringTeam: null,
+              points: 0,
+              penalty: 0,
+              correctIndex: q.correct,
+              selectedIndex: null,
+              stealIndex: null,
+              wager: false,
+              relampago: false,
+            },
+          });
+          return;
+        }
 
         // ───────────── Modo VERSUS ─────────────
         if (state.mode === "versus") {
@@ -671,6 +805,75 @@ export const useGameStore = create<GameState>()(
       },
 
       toggleWager: () => set((s) => ({ wagerActive: !s.wagerActive })),
+
+      passQuestion: () => {
+        const state = get();
+        if (
+          state.mode !== "passa" ||
+          !state.current ||
+          state.answered ||
+          state.challenge !== null ||
+          state.passCount >= 2
+        )
+          return;
+        set({
+          holderTeam: (1 - state.holderTeam) as TeamIndex,
+          passCount: state.passCount + 1,
+          selectedOption: null,
+          markedRemaining: null,
+        });
+      },
+
+      acceptChallenge: () => {
+        const state = get();
+        if (
+          state.mode !== "passa" ||
+          !state.current ||
+          state.answered ||
+          state.challenge !== null ||
+          state.passCount !== 2
+        )
+          return;
+        // Repõe o pool se todos os desafios já saíram na partida.
+        const pool = state.challengePool.length > 0 ? state.challengePool : [...challenges];
+        const picked = pickRandom(pool);
+        if (!picked) return;
+        set({
+          challenge: picked,
+          challengePool: pool.filter((c) => c.id !== picked.id),
+        });
+      },
+
+      resolveChallenge: (fulfilled) => {
+        const state = get();
+        const q = state.current;
+        if (state.mode !== "passa" || !q || !state.challenge || state.answered) return;
+
+        const ht = state.holderTeam;
+        const team = state.teams[ht];
+        const teams = [...state.teams] as [TeamState, TeamState];
+        const points = fulfilled ? basePoints(q.difficulty) : 0;
+
+        teams[ht] = fulfilled
+          ? { ...team, score: team.score + points, correct: team.correct + 1 }
+          : { ...team, wrong: team.wrong + 1, streak: 0 };
+
+        set({
+          teams,
+          answered: true,
+          versusResult: {
+            outcome: fulfilled ? "challenge-done" : "challenge-failed",
+            scoringTeam: fulfilled ? ht : null,
+            points,
+            penalty: 0,
+            correctIndex: q.correct,
+            selectedIndex: null,
+            stealIndex: null,
+            wager: false,
+            relampago: false,
+          },
+        });
+      },
     }),
     {
       name: "desafio-biblico:state",

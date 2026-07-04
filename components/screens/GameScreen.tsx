@@ -20,12 +20,12 @@ export function GameScreen() {
   const finishGame = useGameStore((s) => s.finishGame);
   const [showRanking, setShowRanking] = useState(false);
 
-  const isVersus = mode === "versus";
+  const isTeam = mode !== "solo";
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       {/* HUD */}
-      {isVersus ? (
+      {isTeam ? (
         <VersusHud />
       ) : (
         <div className="glass flex items-center justify-between gap-4 rounded-2xl px-5 py-3">

@@ -45,24 +45,36 @@ function TeamScore({ team, active }: { team: TeamIndex; active: boolean }) {
 }
 
 export function VersusHud() {
+  const mode = useGameStore((s) => s.mode);
   const currentTeam = useGameStore((s) => s.currentTeam);
+  const holderTeam = useGameStore((s) => s.holderTeam);
+  const holderName = useGameStore((s) => s.teams[s.holderTeam].name);
+  const hasQuestion = useGameStore((s) => s.current !== null);
   const turnIndex = useGameStore((s) => s.turnIndex);
   const totalRounds = useGameStore((s) => s.totalRounds);
 
+  const isPassa = mode === "passa";
   const round = roundOf(turnIndex);
-  const relampago = isRelampago(turnIndex);
+  const relampago = mode === "versus" && isRelampago(turnIndex);
+  // No passa e repassa, o destaque segue a equipe que segura a pergunta.
+  const highlight = isPassa && hasQuestion ? holderTeam : currentTeam;
 
   return (
     <div className="glass rounded-2xl px-4 py-3">
       <div className="flex items-center justify-between gap-2">
-        <TeamScore team={0} active={currentTeam === 0} />
+        <TeamScore team={0} active={highlight === 0} />
         <div className="flex flex-col items-center px-1">
-          <span className="text-2xl md:text-3xl">⚔️</span>
+          <span className="text-2xl md:text-3xl">{isPassa ? "🔁" : "⚔️"}</span>
           <span className="whitespace-nowrap text-[0.65rem] uppercase tracking-wider text-ink-soft">
             Rodada {round}/{totalRounds}
           </span>
+          {isPassa && hasQuestion && (
+            <span className="max-w-[8rem] truncate whitespace-nowrap text-[0.65rem] text-gold-light">
+              📌 com {holderName}
+            </span>
+          )}
         </div>
-        <TeamScore team={1} active={currentTeam === 1} />
+        <TeamScore team={1} active={highlight === 1} />
       </div>
       {relampago && (
         <motion.div

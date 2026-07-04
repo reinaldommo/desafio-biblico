@@ -235,5 +235,5 @@ function SoloResultScreen() {
 
 export function ResultScreen() {
   const mode = useGameStore((s) => s.mode);
-  return mode === "versus" ? <VersusResultScreen /> : <SoloResultScreen />;
+  return mode !== "solo" ? <VersusResultScreen /> : <SoloResultScreen />;
 }

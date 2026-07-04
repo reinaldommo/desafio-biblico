@@ -6,7 +6,11 @@ import { HelpButton } from "./HelpButton";
 export function HelpBar() {
   const answered = useGameStore((s) => s.answered);
   const helps = useGameStore((s) =>
-    s.mode === "versus" ? s.teams[s.currentTeam].helps : s.helps,
+    s.mode === "versus"
+      ? s.teams[s.currentTeam].helps
+      : s.mode === "passa"
+        ? s.teams[s.holderTeam].helps
+        : s.helps,
   );
   const eliminatedOptions = useGameStore((s) => s.eliminatedOptions);
   const useEliminate = useGameStore((s) => s.useEliminate);

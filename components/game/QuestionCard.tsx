@@ -12,6 +12,9 @@ import { HelpBar } from "./HelpBar";
 import { PastorHint } from "./PastorHint";
 import { AnswerReveal } from "./AnswerReveal";
 import { VersusReveal } from "./VersusReveal";
+import { PassaActions } from "./PassaActions";
+import { ChallengeCard } from "./ChallengeCard";
+import { PassaReveal } from "./PassaReveal";
 
 export function QuestionCard() {
   const reduce = useReducedMotion();
@@ -30,6 +33,8 @@ export function QuestionCard() {
   const wagerActive = useGameStore((s) => s.wagerActive);
   const timerEnabled = useGameStore((s) => s.timerEnabled);
   const timerSeconds = useGameStore((s) => s.timerSeconds);
+  const holderTeam = useGameStore((s) => s.holderTeam);
+  const challenge = useGameStore((s) => s.challenge);
 
   const selectOption = useGameStore((s) => s.selectOption);
   const revealResult = useGameStore((s) => s.revealResult);
@@ -40,6 +45,8 @@ export function QuestionCard() {
   const currentCategory = useGameStore((s) => s.currentCategory);
 
   const isVersus = mode === "versus";
+  const isPassa = mode === "passa";
+  const isTeam = mode !== "solo";
 
   // No modo manual, marcar a resposta congela o cronômetro até a revelação.
   const markedPending = manualReveal && !answered && selectedOption !== null;
@@ -47,27 +54,28 @@ export function QuestionCard() {
   const { remaining } = useTimer({
     seconds: timerSeconds,
     enabled: timerEnabled,
-    resetKey: current?.num,
-    paused: answered || markedPending,
+    // No passa e repassa, cada equipe que recebe a pergunta ganha o tempo cheio.
+    resetKey: isPassa ? `${current?.num}:${holderTeam}` : current?.num,
+    paused: answered || markedPending || challenge !== null,
     onExpire: timerExpired,
   });
 
   // Confete ao pontuar
   useEffect(() => {
     if (reduce) return;
-    if (isVersus) {
+    if (isTeam) {
       if (answered && !stealPhase && versusResult?.scoringTeam != null) burst();
     } else if (answered && lastResult?.correct) {
       burst();
     }
-  }, [answered, stealPhase, versusResult, lastResult, isVersus, burst, reduce]);
+  }, [answered, stealPhase, versusResult, lastResult, isTeam, burst, reduce]);
 
   if (!current) return null;
 
   const hasMore = currentCategory != null && remainingFn(currentCategory) > 0;
-  const showGrid = !isVersus || !answered;
+  const showGrid = (!isTeam || !answered) && !challenge;
   const wrongShake = answered && !reduce && (
-    isVersus
+    isTeam
       ? versusResult?.outcome === "missed"
       : lastResult != null && !lastResult.correct
   );
@@ -93,7 +101,7 @@ export function QuestionCard() {
             Pergunta #{current.num}
           </span>
         </div>
-        {timerEnabled && !answered && (
+        {timerEnabled && !answered && !challenge && (
           <Timer remaining={remaining} total={timerSeconds} />
         )}
       </div>
@@ -105,14 +113,22 @@ export function QuestionCard() {
         {current.q}
       </motion.h2>
 
-      {!answered && (
+      {!answered && !challenge && (
         <div className="mt-5">
           <HelpBar />
         </div>
       )}
 
+      {isPassa && !answered && !challenge && (
+        <PassaActions markedPending={markedPending} />
+      )}
+
       <AnimatePresence>
-        {pastorHint && !answered && <PastorHint hint={pastorHint} />}
+        {pastorHint && !answered && !challenge && <PastorHint hint={pastorHint} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isPassa && challenge && !answered && <ChallengeCard />}
       </AnimatePresence>
 
       {showGrid && (
@@ -159,7 +175,8 @@ export function QuestionCard() {
 
       <AnimatePresence>
         {answered && isVersus && <VersusReveal question={current} />}
-        {answered && !isVersus && lastResult && (
+        {answered && isPassa && <PassaReveal question={current} />}
+        {answered && !isTeam && lastResult && (
           <AnswerReveal
             question={current}
             result={lastResult}

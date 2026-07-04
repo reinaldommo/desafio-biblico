@@ -22,8 +22,15 @@ export interface HelpsState {
   skip: number;
 }
 
-/** Modo de jogo: solo (1 equipe) ou versus (2 equipes disputando). */
-export type GameMode = "solo" | "versus";
+/** Desafio do modo Passa e Repassa (prenda divertida julgada pelo operador). */
+export interface Challenge {
+  id: number;
+  emoji: string;
+  text: string;
+}
+
+/** Modo de jogo: solo (1 equipe), versus (2 equipes) ou passa e repassa (2 equipes com passe). */
+export type GameMode = "solo" | "versus" | "passa";
 
 /** Índice da equipe no modo versus. */
 export type TeamIndex = 0 | 1;
@@ -39,10 +46,13 @@ export interface TeamState {
   helps: HelpsState;
 }
 
-/** Resultado de uma rodada no modo versus (para feedback visual). */
+/** Resultado de uma rodada nos modos de equipe (para feedback visual). */
 export interface VersusResult {
-  /** correct = equipe da vez acertou; stolen = adversária roubou; missed = ninguém acertou. */
-  outcome: "correct" | "stolen" | "missed";
+  /**
+   * correct = equipe acertou; stolen = adversária roubou (versus); missed = ninguém acertou;
+   * challenge-done / challenge-failed = desafio julgado pelo operador (passa e repassa).
+   */
+  outcome: "correct" | "stolen" | "missed" | "challenge-done" | "challenge-failed";
   /** Equipe que pontuou nesta rodada (null se ninguém). */
   scoringTeam: TeamIndex | null;
   /** Pontos somados à equipe que pontuou. */
