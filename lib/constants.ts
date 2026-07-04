@@ -2,7 +2,7 @@ import type { Difficulty } from "@/types";
 
 export const SCORING_CONFIG = {
   base: {
-    easy: 100,
+    easy: 200,
     medium: 200,
     hard: 300,
   } as Record<Difficulty, number>,

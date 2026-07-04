@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { QUESTION_COUNTS } from "@/data/questions";
-import { VERSUS_CONFIG } from "@/lib/constants";
+import { SCORING_CONFIG, VERSUS_CONFIG } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
 import { RankingModal } from "@/components/ranking/RankingModal";
 
@@ -233,7 +233,7 @@ export function WelcomeScreen() {
         )}
         <div className="divider-gold my-4" />
         <p className="text-center text-ink-soft">
-          {QUESTION_COUNTS.total} perguntas · Fácil 100 · Média 200 · Difícil 300 pts
+          {QUESTION_COUNTS.total} perguntas · Fácil {SCORING_CONFIG.base.easy} · Média {SCORING_CONFIG.base.medium} · Difícil {SCORING_CONFIG.base.hard} pts
           {" · "}bônus de sequência 🔥
         </p>
       </div>
