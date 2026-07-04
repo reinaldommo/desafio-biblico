@@ -251,7 +251,6 @@ export function WelcomeScreen() {
         <div className="divider-gold my-4" />
         <p className="text-center text-ink-soft">
           {QUESTION_COUNTS.total} perguntas · Fácil {SCORING_CONFIG.base.easy} · Média {SCORING_CONFIG.base.medium} · Difícil {SCORING_CONFIG.base.hard} pts
-          {" · "}bônus de sequência 🔥
         </p>
       </div>
 

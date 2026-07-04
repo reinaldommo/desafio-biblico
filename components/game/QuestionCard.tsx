@@ -144,7 +144,7 @@ export function QuestionCard() {
               isCorrect={i === current.correct}
               isSelected={i === selectedOption}
               marked={!answered && i === selectedOption}
-              onSelect={(idx) => selectOption(idx, remaining)}
+              onSelect={(idx) => selectOption(idx)}
             />
           ))}
         </div>

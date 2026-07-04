@@ -16,7 +16,7 @@ import type {
 import { questions } from "@/data/questions";
 import { challenges } from "@/data/challenges";
 import { pickRandom, removeQuestion, pickEliminations } from "@/lib/draw";
-import { computeScore, basePoints } from "@/lib/scoring";
+import { basePoints } from "@/lib/scoring";
 import { addToRanking } from "@/lib/ranking";
 import { randomPastorHint } from "@/lib/pastorHints";
 import {
@@ -54,7 +54,6 @@ interface GameState {
   current: Question | null;
   currentCategory: DrawCategory | null;
   selectedOption: number | null;
-  markedRemaining: number | null;
   answered: boolean;
   eliminatedOptions: number[];
   pastorHint: string | null;
@@ -105,7 +104,7 @@ interface GameState {
   startGame: () => void;
   startVersus: () => void;
   drawQuestion: (category: DrawCategory) => void;
-  selectOption: (index: number, remainingSeconds?: number) => void;
+  selectOption: (index: number) => void;
   revealResult: () => void;
   useEliminate: () => void;
   usePastor: () => void;
@@ -171,7 +170,6 @@ const initialRoundState = {
   current: null as Question | null,
   currentCategory: null as DrawCategory | null,
   selectedOption: null as number | null,
-  markedRemaining: null as number | null,
   answered: false,
   eliminatedOptions: [] as number[],
   pastorHint: null as string | null,
@@ -190,7 +188,6 @@ const initialRoundState = {
 function buildAnswerPatch(
   state: GameState,
   index: number,
-  remaining: number,
 ): Partial<GameState> {
   const q = state.current as Question;
   const correct = index === q.correct;
@@ -203,13 +200,7 @@ function buildAnswerPatch(
 
     if (correct) {
       const newStreak = team.streak + 1;
-      const points = computeScore({
-        difficulty: q.difficulty,
-        streak: newStreak,
-        timerEnabled: state.timerEnabled,
-        remaining,
-        total: state.timerSeconds,
-      });
+      const points = basePoints(q.difficulty);
       teams[ht] = {
         ...team,
         score: team.score + points,
@@ -265,15 +256,8 @@ function buildAnswerPatch(
 
     if (correct) {
       const newStreak = team.streak + 1;
-      const baseScore = computeScore({
-        difficulty: q.difficulty,
-        streak: newStreak,
-        timerEnabled: state.timerEnabled,
-        remaining,
-        total: state.timerSeconds,
-      });
       const mult = relMult * (state.wagerActive ? VERSUS_CONFIG.wagerMultiplier : 1);
-      const points = Math.round(baseScore * mult);
+      const points = basePoints(q.difficulty) * mult;
       teams[ct] = {
         ...team,
         score: team.score + points,
@@ -332,15 +316,7 @@ function buildAnswerPatch(
 
   // ───────────── Modo SOLO ─────────────
   const newStreak = correct ? state.streak + 1 : 0;
-  const pointsEarned = correct
-    ? computeScore({
-        difficulty: q.difficulty,
-        streak: newStreak,
-        timerEnabled: state.timerEnabled,
-        remaining,
-        total: state.timerSeconds,
-      })
-    : 0;
+  const pointsEarned = correct ? basePoints(q.difficulty) : 0;
 
   return {
     answered: true,
@@ -493,31 +469,26 @@ export const useGameStore = create<GameState>()(
         });
       },
 
-      selectOption: (index, remainingSeconds) => {
+      selectOption: (index) => {
         const state = get();
         const q = state.current;
         if (!q || state.answered) return;
 
-        const remaining =
-          remainingSeconds ?? (state.timerEnabled ? state.timerSeconds : 0);
-
         // Revelação manual: apenas marca a resposta (pode ser trocada até revelar).
         if (state.manualReveal) {
-          set({ selectedOption: index, markedRemaining: remaining });
+          set({ selectedOption: index });
           return;
         }
 
         // Revelação instantânea: marca e revela de uma vez.
-        set(buildAnswerPatch(state, index, remaining));
+        set(buildAnswerPatch(state, index));
       },
 
       revealResult: () => {
         const state = get();
         const q = state.current;
         if (!q || state.answered || state.selectedOption === null) return;
-        const remaining =
-          state.markedRemaining ?? (state.timerEnabled ? state.timerSeconds : 0);
-        set(buildAnswerPatch(state, state.selectedOption, remaining));
+        set(buildAnswerPatch(state, state.selectedOption));
       },
 
       resolveSteal: (index) => {
@@ -820,7 +791,6 @@ export const useGameStore = create<GameState>()(
           holderTeam: (1 - state.holderTeam) as TeamIndex,
           passCount: state.passCount + 1,
           selectedOption: null,
-          markedRemaining: null,
         });
       },
 

@@ -6,12 +6,6 @@ export const SCORING_CONFIG = {
     medium: 200,
     hard: 300,
   } as Record<Difficulty, number>,
-  /** Acréscimo por ponto de streak (10% por acerto consecutivo). */
-  streakStep: 0.1,
-  /** Teto do multiplicador de streak. */
-  streakMax: 1.5,
-  /** Fração da base disponível como bônus de tempo (50%). */
-  timeBonusFraction: 0.5,
 };
 
 export const HELP_LIMITS = {
