@@ -6,15 +6,16 @@ Gincana Bíblica interativa da **Igreja Evangélica Pentecostal Presbiteriana**.
 
 ## ✨ Recursos
 
-- **340 perguntas** bíblicas em 3 níveis (Fácil · Média · Difícil), com referências.
+- **380 perguntas** bíblicas em 3 níveis (Fácil · Média · Difícil), com referências.
+- **Alternativas embaralhadas a cada sorteio**: a ordem das opções é sorteada de
+  novo em cada rodada, então a resposta certa não fica sempre na mesma letra.
 - **Modo Versus (2 equipes)** ⚔️: equipes se revezam por rodadas, com placar VS ao vivo,
   tela de vencedor e ajudas independentes por equipe.
   - 🎲 **Aposta** (dobro ou nada): antes de sortear, vale o dobro — acertou dobra, errou perde.
   - 🔁 **Roubo (rebote)**: se a equipe da vez erra, a adversária pode roubar os pontos.
   - ⚡ **Rodada relâmpago**: a cada 3 rodadas, todos os pontos valem em dobro.
 - **Modo Solo (1 equipe)**: a experiência clássica de jogo contínuo.
-- **Pontuação e gamificação**: pontos por dificuldade (100/200/300), bônus de
-  sequência (streak 🔥) e bônus de tempo.
+- **Pontuação por dificuldade**: 200 (fácil) / 200 (média) / 300 (difícil) pontos fixos por acerto.
 - **Revelação manual** (opcional, padrão ligada): a equipe marca a resposta e um
   botão "🔎 Revelar resultado" mostra o acerto/erro — ideal para apresentador.
 - **Cronômetro opcional** por pergunta (20/30/45/60s) com anel regressivo.

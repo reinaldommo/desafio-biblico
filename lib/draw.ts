@@ -16,6 +16,29 @@ export function removeQuestion(
 }
 
 /**
+ * Embaralha as 4 alternativas de uma pergunta (Fisher-Yates) e recalcula o
+ * índice `correct` para a nova posição. Retorna uma cópia; não muta `question`.
+ *
+ * Corrige o viés do banco de perguntas (resposta certa concentrada numa letra)
+ * sem precisar reescrever cada pergunta — a ordem é sorteada de novo a cada rodada.
+ */
+export function shuffleOptions(question: Question): Question {
+  const order = [0, 1, 2, 3];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const options = order.map((i) => question.options[i]) as [
+    string,
+    string,
+    string,
+    string,
+  ];
+  const correct = order.indexOf(question.correct) as 0 | 1 | 2 | 3;
+  return { ...question, options, correct };
+}
+
+/**
  * Escolhe aleatoriamente índices de opções erradas para eliminar.
  * Retorna até `count` índices distintos diferentes da resposta correta.
  */

@@ -15,7 +15,7 @@ import type {
 } from "@/types";
 import { questions } from "@/data/questions";
 import { challenges } from "@/data/challenges";
-import { pickRandom, removeQuestion, pickEliminations } from "@/lib/draw";
+import { pickRandom, removeQuestion, pickEliminations, shuffleOptions } from "@/lib/draw";
 import { basePoints } from "@/lib/scoring";
 import { addToRanking } from "@/lib/ranking";
 import { randomPastorHint } from "@/lib/pastorHints";
@@ -453,7 +453,7 @@ export const useGameStore = create<GameState>()(
 
         set({
           available: nextAvailable,
-          current: picked,
+          current: shuffleOptions(picked),
           currentCategory: category,
           selectedOption: null,
           answered: false,
